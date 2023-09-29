@@ -40,32 +40,26 @@ towns_dict =  df.set_index("location").apply(lambda x: tuple([float(y) for y in 
 # Then it stores as a list of tuples each time (key) with the search popularity at that time (value)
 def get_csv_info(file): 
 
-    # This is where we'll store the info
-    info = []
 
     # Ignore the first 3 lines, they're not data
     # Keep a counter to ignore the first 3
     counter = 0
 
-    with open("citydata/" + file + ".csv" , "r+") as file:
-        
-        for line in file:
-            
-            counter += 1
-        
-            if counter > 3:
-                # Kill the newline char and then get the data
-                newline = line.replace("\n" , "").split(",")
-                
-                # Create the datetime corresponding to the date in the line
-                time = dt.date( *[ int(x) for x in newline[0].split("-") ]) 
-                
-                # Sometimes it may say <1 searches, we'll just replace this with 1 as an upper bound
-                searches = int( newline[1].replace("<","") )
-                
-                info.append((time, searches))
-        
-        return info
+    # Parse the CSV with required parameters, all <1 values will be replaced with 1
+    df = pd.read_csv("citydata/" + file + ".csv", skiprows=3, names=["time","size"],parse_dates=["time"],na_values=["<1"] )
+    
+    # Fill NA values and parse as int so we can perform numerical operations
+    df = df.fillna("1")
+    df["size"] = df["size"].astype(int)
+
+
+    # This is the final product
+    # This is a complicated way to basically just wrap each date-size pair into a list of tuples
+    # set time as the index to be the keys to a dict, then flip the orientation of the frame, convert to dict,
+    # unpack the "size" and then list(df.items()) to get the result
+    info = list( df.set_index("time").apply(lambda x:x, axis=1).to_dict()["size"].items() )
+    
+    return info
 
 # Same as above, but because the data is only stored for every week instead of every day, need to use
 # interpolation to estimate the search frequency values for each DAY
